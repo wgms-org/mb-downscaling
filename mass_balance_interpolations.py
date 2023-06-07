@@ -1,20 +1,8 @@
 """
-mass_balance_interpolations.py
-
-Author: M. Zemp
-Date: 17 April 2022
-Last changes: 6 June 2023
-
-Scripted for Python 3.9
-
-Description:
-This script uses sine functions to estimate annual and seasonal balances between (geodetic) survey dates.
-
+Interpolate glacier mass balance from seasonal observations.
 """
 import pandas as pd
 import numpy as np
-
-"""functions"""
 
 
 def sine_interpolation_from_mean_balances(balance_amplitude, annual_balance, temporal_resolution, winter_fraction):
