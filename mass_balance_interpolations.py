@@ -142,34 +142,22 @@ def sine_interpolation_from_seasonal_balances(
     Returns:
         Dataframe with columns TIME_STEP (float) and BALANCE (float).
     """
-    # Define sine functions parameters following the basic equation: y = f(x) = A sin(Bx + C) + D
-    b_w = (2 * np.pi) / (temporal_resolution * 2 * winter_fraction)  # x-scale ("frequency")
-    b_s = (2 * np.pi) / (temporal_resolution * 2 * (1 - winter_fraction))  # x-scale ("frequency")
-    a_w = winter_balance * b_w / 2  # # y-scale ("amplitude")
-    a_s = abs(summer_balance) * b_s / 2  # # y-scale ("amplitude")
-    c = 0  # x-shift ("phase shift")
-    d = 0  # y-shift ("vertical shift")
-
-    # Calculate time intervals
-    time_steps_annual = np.arange(0.5, temporal_resolution, 1).tolist()  # for full year
-    winter_length = int(round(temporal_resolution * winter_fraction, 0))
-    summer_length = int(temporal_resolution - winter_length)
-    time_steps_winter = np.arange(0.5, 2 * winter_length, 1).tolist()
-    time_steps_summer = np.arange(0.5, 2 * summer_length, 1).tolist()
-
-    # calculate balance for each time interval in winter and then in summer periods
-    balances = []
-    for time_step in time_steps_winter[:winter_length]:
-        balance = a_w * np.sin(b_w * time_step + c) + d
-        balances.append(balance)
-    for time_step in time_steps_summer[-1 * summer_length:]:
-        balance = a_s * np.sin(b_s * time_step + c) + d
-        balances.append(balance)
-
-    # add to output dataframe
-    interpolated_balances_df = pd.DataFrame({'TIME_STEP': time_steps_annual, 'BALANCE': balances})
-
-    return interpolated_balances_df
+    # Set sine periods from winter fraction
+    b_w = (2 * np.pi) / (temporal_resolution * 2 * winter_fraction)
+    b_s = (2 * np.pi) / (temporal_resolution * 2 * (1 - winter_fraction))
+    # Compute sine amplitudes
+    # seasonal balance = a * 2 / b
+    a_w = winter_balance * b_w / 2
+    a_s = summer_balance * b_s / 2
+    # Compute balance at each time step
+    end_winter = temporal_resolution * winter_fraction
+    t = np.arange(0.5, temporal_resolution, 1)
+    is_winter = t < end_winter
+    balances = np.concatenate((
+        a_w * np.sin(b_w * t[is_winter]),
+        a_s * np.sin(b_s * (t[~is_winter] - end_winter)),
+    ))
+    return pd.DataFrame({'TIME_STEP': t, 'BALANCE': balances})
 
 
 def interpolate_daily_balances(
