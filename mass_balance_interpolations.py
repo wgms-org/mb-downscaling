@@ -1,6 +1,9 @@
 """
 Interpolate glacier mass balance from seasonal observations.
 """
+import datetime
+from typing import Tuple
+
 import pandas as pd
 import numpy as np
 
@@ -164,6 +167,7 @@ def interpolate_daily_balances(
     bwsa_df: pd.DataFrame,
     balance_amplitude: float = None,
     winter_fraction: float = 0.5,
+    winter_start: Tuple[bool, int, int] = (False, 10, 1),
     uniform_annual_balance: bool = True
 ) -> pd.DataFrame:
     """
@@ -180,6 +184,8 @@ def interpolate_daily_balances(
             it is computed from the seasonal balances in `bwsa_df`
             (see `calc_mass_balance_amplitude`).
         winter_fraction: Annual fraction of winter season.
+        winter_start: Date of the start of winter as a year offset
+            (False: previous, True: current), month, and day.
         uniform_annual_balance: See Whether annual balance should be applied
             uniformally over the year (True) rather than assume that all mass
             gain/loss occurs in winter/summer (False).
@@ -187,14 +193,17 @@ def interpolate_daily_balances(
     Returns:
         Dataframe with index DATE (datetime) and column BALANCE (float).
     """
+    is_start_year, month, day = winter_start
     if balance_amplitude is None:
         balance_amplitude = calc_mass_balance_amplitude(bwsa_df)
     years = []
     for row in bwsa_df.to_dict(orient='records'):
-        year = int(row['Year'])
         # Create series of every date in the hydrological year
-        start_date = f'{(year - 1)}-10-01'
-        end_date = f'{year}-09-30'
+        start_year = int(row['Year']) - (0 if is_start_year else 1)
+        start_date = datetime.datetime(start_year, month, day)
+        end_date = (start_date - datetime.timedelta(days=1)).replace(
+            year=start_year + 1
+        )
         dates = pd.date_range(start_date, end_date, freq='D')
         n_dates = dates.size
         # Interpolate daily balances
