@@ -9,7 +9,7 @@ def sine_interpolation_from_mean_balances(
     annual_balance: float,
     balance_amplitude: float,
     winter_fraction: float = 0.5,
-    temporal_resolution: int = 364,
+    temporal_resolution: int = 365,
     uniform_annual_balance: bool = True
 ) -> pd.DataFrame:
     """
@@ -29,7 +29,7 @@ def sine_interpolation_from_mean_balances(
             (see `calc_mass_balance_amplitude`).
         winter_fraction: Annual fraction of winter season.
         temporal_resolution: Temporal resolution of output,
-            e.g. 12 (~monthly) or 364 (~daily).
+            e.g. 12 (~monthly) or 365 (~daily).
         uniform_annual_balance: Whether annual balance should be applied
             uniformally over the year (True) rather than assume that all mass
             gain/loss occurs in winter/summer.
@@ -119,7 +119,7 @@ def sine_interpolation_from_seasonal_balances(
     winter_balance: float,
     summer_balance: float,
     winter_fraction: float = 0.5,
-    temporal_resolution: int = 364
+    temporal_resolution: int = 365
 ) -> pd.DataFrame:
     """
     Interpolate mass balance for a full year from seasonal balances.
@@ -137,7 +137,7 @@ def sine_interpolation_from_seasonal_balances(
         summer_balance: Summer mass balance.
         winter_fraction: Annual fraction of winter season.
         temporal_resolution: Temporal resolution of output,
-            e.g. 12 (~monthly) or 364 (~daily).
+            e.g. 12 (~monthly) or 365 (~daily).
 
     Returns:
         Dataframe with columns TIME_STEP (float) and BALANCE (float).
