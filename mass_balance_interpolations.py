@@ -218,8 +218,5 @@ def calc_mass_balance_amplitude(bwsa_df):
     Returns:
        alpha (float): Climatic mass-balance amplitude calculated from Bw and abs(Bs).
     """
-
-    # calculate glacier mass-balance amplitude (using absolute values in case data provided with wrong signs)
-    alpha = (abs(bwsa_df['WINTER_BALANCE'].mean()) + abs(bwsa_df['SUMMER_BALANCE'].mean())) / 2
-
-    return alpha
+    alphas = ((bwsa_df['WINTER_BALANCE'] - bwsa_df['SUMMER_BALANCE']) / 2).abs()
+    return alphas.mean()
