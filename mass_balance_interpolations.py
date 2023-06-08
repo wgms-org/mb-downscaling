@@ -188,8 +188,12 @@ def interpolate_daily_balances(bwsa_df, alpha, winter_fraction=6/12):
         # check if current year does have seasonal balances
         if np.isnan(row['WINTER_BALANCE']) or np.isnan(row['SUMMER_BALANCE']):
             # interpolate balances for current year climatic mass-balance amplitude and annual balances
-            row_balances = sine_interpolation_from_mean_balances(alpha, row['ANNUAL_BALANCE'], row_numofdays,
-                                                                    winter_fraction)
+            row_balances = sine_interpolation_from_mean_balances(
+                annual_balance=row['ANNUAL_BALANCE'],
+                balance_amplitude=alpha,
+                winter_fraction=winter_fraction,
+                temporal_resolution=row_numofdays
+            )
         else:
             # interpolate balances for current year from winter and summer balances
             row_balances = sine_interpolation_from_seasonal_balances(row['WINTER_BALANCE'], row['SUMMER_BALANCE'],
