@@ -179,42 +179,36 @@ def interpolate_daily_balances(
         winter_fraction: Annual fraction of winter season.
 
     Returns:
-        Dataframe with columns DATE (date) and BALANCE (float).
+        Dataframe with index DATE (datetime) and column BALANCE (float).
     """
-    # create empty dataframe to store results
-    bd_df = pd.DataFrame(columns=['BALANCE'])
-    bd_df.index.name = 'DATE'
-
-    for index, row in bwsa_df.iterrows():
-        # create time series for hydrological year
-        row_start_date = f'{(int(row["Year"]) - 1)}-10-01'
-        row_end_date = f'{int(row["Year"])}-09-30'
-        row_dates = pd.Series(pd.date_range(row_start_date, row_end_date, freq='D'))
-        row_numofdays = row_dates.index[-1] + 1
-
-        # check if current year does have seasonal balances
+    years = []
+    for row in bwsa_df.to_dict(orient='records'):
+        year = int(row['Year'])
+        # Create series of every date in the hydrological year
+        start_date = f'{(year - 1)}-10-01'
+        end_date = f'{year}-09-30'
+        dates = pd.date_range(start_date, end_date, freq='D')
+        n_dates = dates.size
+        # Interpolate daily balances
         if np.isnan(row['WINTER_BALANCE']) or np.isnan(row['SUMMER_BALANCE']):
-            # interpolate balances for current year climatic mass-balance amplitude and annual balances
-            row_balances = sine_interpolation_from_mean_balances(
+            # Use annual balance
+            balances = sine_interpolation_from_mean_balances(
                 annual_balance=row['ANNUAL_BALANCE'],
                 balance_amplitude=alpha,
                 winter_fraction=winter_fraction,
-                temporal_resolution=row_numofdays
+                temporal_resolution=n_dates
             )
         else:
-            # interpolate balances for current year from winter and summer balances
-            row_balances = sine_interpolation_from_seasonal_balances(
+            # Use seasonal balances
+            balances = sine_interpolation_from_seasonal_balances(
                 winter_balance=row['WINTER_BALANCE'],
                 summer_balance=row['SUMMER_BALANCE'],
                 winter_fraction=winter_fraction,
-                temporal_resolution=row_numofdays
+                temporal_resolution=n_dates
             )
-        # add annual to dataframe
-        annual_df = pd.DataFrame({'BALANCE': row_balances['BALANCE'].tolist()}, index=row_dates)
-        # append to series
-        bd_df = pd.concat([bd_df, annual_df])
-
-    return bd_df
+        year = pd.DataFrame({'BALANCE': balances['BALANCE'], 'DATE': dates})
+        years.append(year)
+    return pd.concat(years).set_index('DATE')
 
 
 def calc_mass_balance_amplitude(bwsa_df: pd.DataFrame) -> float:
