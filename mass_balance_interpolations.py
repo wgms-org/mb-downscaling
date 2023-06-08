@@ -32,7 +32,7 @@ def sine_interpolation_from_mean_balances(
             e.g. 12 (~monthly) or 365 (~daily).
         uniform_annual_balance: Whether annual balance should be applied
             uniformally over the year (True) rather than assume that all mass
-            gain/loss occurs in winter/summer.
+            gain/loss occurs in winter/summer (False).
 
     Returns:
         Dataframe with columns TIME_STEP (float) and BALANCE (float).
@@ -163,7 +163,8 @@ def sine_interpolation_from_seasonal_balances(
 def interpolate_daily_balances(
     bwsa_df: pd.DataFrame,
     balance_amplitude: float,
-    winter_fraction: float = 0.5
+    winter_fraction: float = 0.5,
+    uniform_annual_balance: bool = True
 ) -> pd.DataFrame:
     """
     Interpolate daily mass balance from either seasonal or annual balances.
@@ -178,6 +179,9 @@ def interpolate_daily_balances(
         balance_amplitude: Mass-balance amplitude
             (see `calc_mass_balance_amplitude`).
         winter_fraction: Annual fraction of winter season.
+        uniform_annual_balance: See Whether annual balance should be applied
+            uniformally over the year (True) rather than assume that all mass
+            gain/loss occurs in winter/summer (False).
 
     Returns:
         Dataframe with index DATE (datetime) and column BALANCE (float).
@@ -197,7 +201,8 @@ def interpolate_daily_balances(
                 annual_balance=row['ANNUAL_BALANCE'],
                 balance_amplitude=balance_amplitude,
                 winter_fraction=winter_fraction,
-                temporal_resolution=n_dates
+                temporal_resolution=n_dates,
+                uniform_annual_balance=uniform_annual_balance
             )
         else:
             # Use seasonal balances
