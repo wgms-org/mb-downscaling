@@ -13,16 +13,15 @@ def sine_interpolation_from_mean_balances(
     uniform_annual_balance: bool = True
 ) -> pd.DataFrame:
     """
-    Interpolate mass balance over a full year (winter-summer cycle).
+    Interpolate mass balance for a full year from annual balance and amplitude.
 
     Winter and summer balances are each represented by their own sine function
     of the form:
 
     f(t) = A sin(Bt) + D,
 
-    where t is time and A, B, and D are parameters chosen such that
-    winter and summer have the right length and the resulting balances match
-    (within rounding error) `annual_balance` and `balance_amplitude`.
+    where t is time and A, B, and D are parameters chosen to match
+    `winter_fraction`, `annual_balance`, and `balance_amplitude`.
 
     Arguments:
         annual_balance: Annual mass balance.
@@ -36,7 +35,7 @@ def sine_interpolation_from_mean_balances(
             gain/loss occurs in winter/summer.
 
     Returns:
-        Interpolated mass balances.
+        Dataframe with columns TIME_STEP (float) and BALANCE (float).
 
     Examples:
         >>> annual_balance = -3
@@ -122,18 +121,26 @@ def sine_interpolation_from_seasonal_balances(
     winter_fraction: float = 0.5,
     temporal_resolution: int = 364
 ) -> pd.DataFrame:
-    """Sine function to interpolate mass balance over the year.
-       The function allows to set different lengths of winter/summer seasons.
-       Returns balances at sub-seasonal rates.
+    """
+    Interpolate mass balance for a full year from seasonal balances.
 
-    Parameters:
-        winter_balance:Winter balance, for a given year or mean over a given period.
-        summer_balance:Summer balance, for a given year or mean over a given period.
-        temporal_resolution:Temporal resolution as desired for output, e.g. 12 (monthly) or 364 (daily).
-        winter_fraction: annual fraction of winter season, e.g. 8/12.
+    Winter and summer balances are each represented by their own sine function
+    of the form:
+
+    f(t) = A sin(Bt) + D,
+
+    where t is time and A, B, and D are parameters chosen to match
+    `winter_fraction`, `winter_balance`, and `summer_balance`.
+
+    Arguments:
+        winter_balance: Winter mass balance.
+        summer_balance: Summer mass balance.
+        winter_fraction: Annual fraction of winter season.
+        temporal_resolution: Temporal resolution of output,
+            e.g. 12 (~monthly) or 364 (~daily).
 
     Returns:
-        sub_annual_balances_df:Dataframe with columns TIME_STEP (float) and BALANCE (float).
+        Dataframe with columns TIME_STEP (float) and BALANCE (float).
     """
     # Define sine functions parameters following the basic equation: y = f(x) = A sin(Bx + C) + D
     b_w = (2 * np.pi) / (temporal_resolution * 2 * winter_fraction)  # x-scale ("frequency")
@@ -170,16 +177,21 @@ def interpolate_daily_balances(
     alpha: float,
     winter_fraction: float = 0.5
 ) -> pd.DataFrame:
-    """Function to interpolate daily balances using sine functions. Returns daily balances.
+    """
+    Interpolate daily mass balance from either seasonal or annual balances.
 
-    Parameters:
-        bwsa_df: DataFrame with Ba, Bw, Bs for selected glacier and time period.
-        alpha: Climatic balance amplitude calculated from winter and summer balances.
-        winter_fraction: Annual fraction of winter season, e.g. 8/12. By default, the fraction is set to equal
-        lenght of winter and summer seasons.
+    See `sine_interpolation_from_seasonal_balances` and
+    `sine_interpolation_from_mean_balances` for the two strategies used.
+
+    Arguments:
+        bwsa_df: DataFrame with columns
+            Year (int), WINTER_BALANCE (float), SUMMER_BALANCE (float),
+            and ANNUAL_BALANCE (float).
+        alpha: Mass-balance amplitude (see `calc_mass_balance_amplitude`).
+        winter_fraction: Annual fraction of winter season.
 
     Returns:
-        bd_df:Dataframe with columns DATE (date) and BALANCE (float).
+        Dataframe with columns DATE (date) and BALANCE (float).
     """
     # create empty dataframe to store results
     bd_df = pd.DataFrame(columns=['BALANCE'])
@@ -218,16 +230,22 @@ def interpolate_daily_balances(
 
 
 def calc_mass_balance_amplitude(bwsa_df: pd.DataFrame) -> float:
-    """Function to calculate glacier mass-balance amplitude based on available winter and summer balances.
-        The term and calculation of glacier mass-balance amplitude are based on Cogley et al. (2011, UNESCO & IACS)
-        and Braithwaite & Hughes (2020, Frontiers Earth Sciences).
-        Returns mass-balance amplitude.
+    """
+    Calculate the mean mass-balance amplitude from winter and summer balances.
 
-    Parameters:
-       bwsa_df: DataFrame with winter, summer, and annual balances for selected glacier and time period.
+    Mass-balance amplitude is defined as half the absolute value of the
+    difference between the summer and winter balance.
+
+    The term and definiton are based on
+    Cogley et al. 2011 (https://unesdoc.unesco.org/ark:/48223/pf0000192525) and
+    Braithwaite & Hughes 2020 (https://doi.org/10.3389/feart.2020.00302).
+
+    Arguments:
+        bwsa_df: Dataframe with columns WINTER_BALANCE (float) and
+            SUMMER_BALANCE (float).
 
     Returns:
-       alpha: Climatic mass-balance amplitude calculated from Bw and abs(Bs).
+        Mean of mass-balance amplitudes.
     """
     alphas = ((bwsa_df['WINTER_BALANCE'] - bwsa_df['SUMMER_BALANCE']) / 2).abs()
     return alphas.mean()
