@@ -162,7 +162,7 @@ def sine_interpolation_from_seasonal_balances(
 
 def interpolate_daily_balances(
     bwsa_df: pd.DataFrame,
-    balance_amplitude: float,
+    balance_amplitude: float = None,
     winter_fraction: float = 0.5,
     uniform_annual_balance: bool = True
 ) -> pd.DataFrame:
@@ -176,7 +176,8 @@ def interpolate_daily_balances(
         bwsa_df: DataFrame with columns
             Year (int), WINTER_BALANCE (float), SUMMER_BALANCE (float),
             and ANNUAL_BALANCE (float).
-        balance_amplitude: Mass-balance amplitude
+        balance_amplitude: Mass-balance amplitude. If not provided,
+            it is computed from the seasonal balances in `bwsa_df`
             (see `calc_mass_balance_amplitude`).
         winter_fraction: Annual fraction of winter season.
         uniform_annual_balance: See Whether annual balance should be applied
@@ -186,6 +187,8 @@ def interpolate_daily_balances(
     Returns:
         Dataframe with index DATE (datetime) and column BALANCE (float).
     """
+    if balance_amplitude is None:
+        balance_amplitude = calc_mass_balance_amplitude(bwsa_df)
     years = []
     for row in bwsa_df.to_dict(orient='records'):
         year = int(row['Year'])
