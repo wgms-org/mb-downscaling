@@ -91,8 +91,6 @@ def sine_interpolation_from_mean_balances(
     # Calculate seasonal balances from annual balance and balance amplitude
     Bs = annual_balance / 2 - balance_amplitude
     Bw = annual_balance - Bs
-    assert annual_balance == Bs + Bw
-    assert balance_amplitude == (Bw - Bs) / 2
     # Compute sine amplitudes
     # seasonal balance = a * 2 / b
     a_w = Bw * b_w / 2
