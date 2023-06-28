@@ -362,17 +362,22 @@ def interpolate_daily_balances(
 
     Returns:
         Dataframe with index DATE (datetime) and column BALANCE (float).
+
+    Raises:
+        ValueError: If winter_start is February 29.
     """
     is_start_year, month, day = winter_start
     if alpha is None:
         alpha = calc_mass_balance_amplitude(bwsa_df)
+    if month == 2 and day == 29:
+        raise ValueError('Winter cannot start on a leap day (February 29)')
     years = []
     for row in bwsa_df.to_dict(orient='records'):
         # Create series of every date in the hydrological year
         start_year = int(row['Year']) - (0 if is_start_year else 1)
         start_date = datetime.datetime(start_year, month, day)
-        end_date = (start_date - datetime.timedelta(days=1)).replace(
-            year=start_year + 1
+        end_date = (
+            start_date.replace(year=start_year + 1) - datetime.timedelta(days=1)
         )
         dates = pd.date_range(start_date, end_date, freq='D')
         n_dates = dates.size
