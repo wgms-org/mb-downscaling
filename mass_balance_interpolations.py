@@ -160,6 +160,22 @@ def generate_seasonal_sine(
     }
 
 
+def seasonal_balances_from_annual_balance(
+    annual_balance: float,
+    balance_amplitude: float
+) -> Tuple[float, float]:
+    """
+    Calculate seasonal balances from annual balance and amplitude.
+
+    Returns:
+        Winter and summer balances.
+    """
+    return (
+        annual_balance / 2 + balance_amplitude,
+        annual_balance / 2 - balance_amplitude
+    )
+
+
 def sine_interpolation_from_mean_balances(
     balance_amplitude: float,
     annual_balance: float,
@@ -233,8 +249,10 @@ def sine_interpolation_from_mean_balances(
         True
     """
     # Calculate seasonal balances from annual balance and balance amplitude
-    winter_balance = annual_balance / 2 + balance_amplitude
-    summer_balance = annual_balance / 2 - balance_amplitude
+    winter_balance, summer_balance = seasonal_balances_from_annual_balance(
+        annual_balance=annual_balance,
+        balance_amplitude=balance_amplitude
+    )
     if uniform_annual_balance:
         edges = np.linspace(0, 1, num=temporal_resolution + 1)
         intervals = np.column_stack((edges[:-1], edges[1:]))
