@@ -21,13 +21,13 @@ def evaluate_sine(
 
     The function is assumed to be of the form:
 
-    f(x) = a sin(b(x + c)) + d
+    f(x) = a sin(b(x - c)) + d
 
     Arguments:
         x: Values at which to evaluate the function.
         a: Amplitude.
         b: Period scaling (period = 2π/b).
-        c: Phase shift (positive: left).
+        c: Phase shift (positive: right).
         d: Vertical shift (positive: up).
         mask: Interval outside of which the function is zero.
 
@@ -45,7 +45,7 @@ def evaluate_sine(
         array([0., 0., 1.])
     """
     x = np.atleast_1d(x)
-    f = a * np.sin(b * (x + c)) + d
+    f = a * np.sin(b * (x - c)) + d
     if mask is not None:
         f[(x >= min(*mask)) & (x <= max(*mask))] = 0
     return f
@@ -64,17 +64,17 @@ def integrate_sine(
 
     The function is assumed to be of the form:
 
-    f(x) = a sin(b(x + c)) + d
+    f(x) = a sin(b(x - c)) + d
 
     The integral in the interval [i, j] is then:
 
-    a(cos(b(i + c)) - cos(b(j + c))) / b + d(j - i)
+    a(cos(b(i - c)) - cos(b(j - c))) / b + d(j - i)
 
     Arguments:
         intervals: Intervals to integrate over [(i1, j1), ..., (in, jn)].
         a: Amplitude.
         b: Period scaling (period = 2π/b).
-        c: Phase shift (positive: left).
+        c: Phase shift (positive: right).
         d: Vertical shift (positive: up).
         mask: Interval outside of which the integral is zero.
 
@@ -100,7 +100,7 @@ def integrate_sine(
         intervals[intervals > xmax] = xmax
     i = intervals[:, 0]
     j = intervals[:, 1]
-    return a * (np.cos(b * (i + c)) - np.cos(b * (j + c))) / b + d * (j - i)
+    return a * (np.cos(b * (i - c)) - np.cos(b * (j - c))) / b + d * (j - i)
 
 
 def generate_seasonal_sine(
@@ -155,7 +155,7 @@ def generate_seasonal_sine(
     return {
         'a': (balance - annual_balance * width) * b / 2,
         'b': b,
-        'c': -min(*interval),
+        'c': min(*interval),
         'd': annual_balance
     }
 
