@@ -181,7 +181,7 @@ def sine_interpolation_from_mean_balances(
     annual_balance: float,
     temporal_resolution: int = 365,
     winter_fraction: float = 0.5,
-    uniform_annual_balance: bool = True
+    uniform_annual_balance: bool = False
 ) -> pd.DataFrame:
     """
     Interpolate mass balance for a full year from annual balance and amplitude.
@@ -234,7 +234,7 @@ def sine_interpolation_from_mean_balances(
         ... )
         True
 
-        And with non-uniform annual balance:
+        And with uniform annual balance:
 
         >>> balances = sine_interpolation_from_mean_balances(
         ...     balance_amplitude, annual_balance, temporal_resolution=12,
@@ -356,7 +356,7 @@ def interpolate_daily_balances(
     alpha: float = None,
     winter_fraction: float = 0.5,
     winter_start: Tuple[bool, int, int] = (False, 10, 1),
-    uniform_annual_balance: bool = True
+    uniform_annual_balance: bool = False
 ) -> pd.DataFrame:
     """
     Interpolate daily mass balance from either seasonal or annual balances.
@@ -374,7 +374,7 @@ def interpolate_daily_balances(
         winter_fraction: Annual fraction of winter season.
         winter_start: Date of the start of winter as a year offset
             (False: previous, True: current), month, and day.
-        uniform_annual_balance: See Whether annual balance should be applied
+        uniform_annual_balance: Whether annual balance should be applied
             uniformally over the year (True) rather than assume that all mass
             gain/loss occurs in winter/summer (False).
 
