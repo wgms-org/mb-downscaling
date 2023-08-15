@@ -1,5 +1,5 @@
 """
-Interpolate glacier mass balance from seasonal observations.
+Downscale annual or seasonal glacier mass balance observations.
 """
 from __future__ import annotations
 import datetime
@@ -217,7 +217,7 @@ def downscale_annual_balance(
     uniform_annual_balance: bool = False
 ) -> np.ndarray:
     """
-    Interpolate mass balance for a full year from annual balance and amplitude.
+    Downscale annual mass balance over a full year.
 
     Winter and summer balances are each represented by their own sine function
     (see `generate_seasonal_sine`).
@@ -319,7 +319,7 @@ def downscale_seasonal_balances(
     temporal_resolution: int = 365
 ) -> np.ndarray:
     """
-    Interpolate mass balance for a full year from seasonal balances.
+    Downscale seasonal mass balances over a full year.
 
     Winter and summer balances are each represented by their own sine function
     (see `generate_seasonal_sine`).
@@ -390,10 +390,10 @@ def downscale_balances_daily(
     uniform_annual_balance: bool = False
 ) -> pd.DataFrame:
     """
-    Interpolate daily mass balance from either seasonal or annual balances.
+    Downscale seasonal or annual mass balances to daily resolution.
 
-    See `sine_interpolation_from_seasonal_balances` and
-    `sine_interpolation_from_mean_balances` for the two strategies used.
+    See `downscale_seasonal_balances` and `downscale_annual_balance`
+    for the two strategies used.
 
     Arguments:
         bwsa_df: DataFrame with columns
@@ -433,7 +433,7 @@ def downscale_balances_daily(
         )
         dates = pd.date_range(start_date, end_date, freq='D')
         n_dates = dates.size
-        # Interpolate daily balances
+        # Downscale to daily resolution
         if np.isnan(row['WINTER_BALANCE']) or np.isnan(row['SUMMER_BALANCE']):
             # Use annual balance
             balances = downscale_annual_balance(
