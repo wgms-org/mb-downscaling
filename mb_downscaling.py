@@ -356,7 +356,7 @@ def sine_interpolation_from_seasonal_balances(
 
 def interpolate_daily_balances(
     bwsa_df: pd.DataFrame,
-    alpha: float = None,
+    balance_amplitude: float = None,
     winter_fraction: float = 0.5,
     winter_start: Tuple[bool, int, int] = (False, 10, 1),
     uniform_annual_balance: bool = False
@@ -371,7 +371,7 @@ def interpolate_daily_balances(
         bwsa_df: DataFrame with columns
             Year (int), WINTER_BALANCE (float), SUMMER_BALANCE (float),
             and ANNUAL_BALANCE (float).
-        alpha: Mass-balance amplitude. If not provided,
+        balance_amplitude: Mean mass-balance amplitude. If not provided,
             it is computed from the seasonal balances in `bwsa_df`
             (see `calculate_balance_amplitude`).
         winter_fraction: Annual fraction of winter season.
@@ -388,11 +388,11 @@ def interpolate_daily_balances(
         ValueError: If winter_start is February 29.
     """
     is_start_year, month, day = winter_start
-    if alpha is None:
-        alphas = calculate_balance_amplitude(
+    if balance_amplitude is None:
+        balance_amplitudes = calculate_balance_amplitude(
             bwsa_df['WINTER_BALANCE'], bwsa_df['SUMMER_BALANCE']
         )
-        alpha = alphas.mean()
+        balance_amplitude = balance_amplitudes.mean()
     if month == 2 and day == 29:
         raise ValueError('Winter cannot start on a leap day (February 29)')
     years = []
@@ -410,7 +410,7 @@ def interpolate_daily_balances(
             # Use annual balance
             balances = sine_interpolation_from_mean_balances(
                 annual_balance=row['ANNUAL_BALANCE'],
-                balance_amplitude=alpha,
+                balance_amplitude=balance_amplitude,
                 winter_fraction=winter_fraction,
                 temporal_resolution=n_dates,
                 uniform_annual_balance=uniform_annual_balance
