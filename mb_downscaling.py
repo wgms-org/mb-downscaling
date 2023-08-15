@@ -215,7 +215,7 @@ def downscale_annual_balance(
     winter_fraction: float = 0.5,
     temporal_resolution: int = 365,
     uniform_annual_balance: bool = False
-) -> pd.DataFrame:
+) -> np.ndarray:
     """
     Interpolate mass balance for a full year from annual balance and amplitude.
 
@@ -234,7 +234,7 @@ def downscale_annual_balance(
             gain/loss occurs in winter/summer (False).
 
     Returns:
-        Dataframe with columns TIME_STEP (float) and BALANCE (float).
+        Mass balance for each time interval.
 
     Examples:
         >>> balance_amplitude = 5
@@ -244,7 +244,7 @@ def downscale_annual_balance(
 
         >>> balances = downscale_annual_balance(
         ...     annual_balance, balance_amplitude, temporal_resolution=12
-        ... )['BALANCE']
+        ... )
         >>> np.isclose(annual_balance, balances.sum())
         True
         >>> np.isclose(
@@ -258,7 +258,7 @@ def downscale_annual_balance(
         >>> balances = downscale_annual_balance(
         ...     annual_balance, balance_amplitude, temporal_resolution=12,
         ...     winter_fraction=0.75
-        ... )['BALANCE']
+        ... )
         >>> np.isclose(annual_balance, balances.sum())
         True
         >>> np.isclose(
@@ -272,7 +272,7 @@ def downscale_annual_balance(
         >>> balances = downscale_annual_balance(
         ...     annual_balance, balance_amplitude, temporal_resolution=12,
         ...     winter_fraction=0.75, uniform_annual_balance=True
-        ... )['BALANCE']
+        ... )
         >>> np.isclose(annual_balance, balances.sum())
         True
         >>> np.isclose(
@@ -303,8 +303,7 @@ def downscale_annual_balance(
             integrate_sine(intervals, **sine_w, mask=[0, winter_fraction]) +
             integrate_sine(intervals, **sine_s, mask=[winter_fraction, 1])
         )
-        t = np.arange(0.5, temporal_resolution, 1)
-        return pd.DataFrame({'TIME_STEP': t, 'BALANCE': balances})
+        return balances
     return downscale_seasonal_balances(
         winter_balance=winter_balance,
         summer_balance=summer_balance,
@@ -318,7 +317,7 @@ def downscale_seasonal_balances(
     summer_balance: float,
     winter_fraction: float = 0.5,
     temporal_resolution: int = 365
-) -> pd.DataFrame:
+) -> np.ndarray:
     """
     Interpolate mass balance for a full year from seasonal balances.
 
@@ -333,7 +332,7 @@ def downscale_seasonal_balances(
             e.g. 12 (~monthly) or 365 (~daily).
 
     Returns:
-        Dataframe with columns TIME_STEP (float) and BALANCE (float).
+        Mass balance for each time interval.
 
     Examples:
         >>> winter_balance = 4
@@ -344,7 +343,7 @@ def downscale_seasonal_balances(
         >>> balances = downscale_seasonal_balances(
         ...     winter_balance=winter_balance, summer_balance=summer_balance,
         ...     winter_fraction=0.5, temporal_resolution=1
-        ... )['BALANCE']
+        ... )
         >>> np.isclose(balances[0], winter_balance + summer_balance)
         True
 
@@ -353,7 +352,7 @@ def downscale_seasonal_balances(
         >>> balances = downscale_seasonal_balances(
         ...     winter_balance=winter_balance, summer_balance=summer_balance,
         ...     winter_fraction=0.5, temporal_resolution=2
-        ... )['BALANCE']
+        ... )
         >>> np.isclose(balances[0], winter_balance)
         True
         >>> np.isclose(balances[1], summer_balance)
@@ -364,7 +363,7 @@ def downscale_seasonal_balances(
         >>> balances = downscale_seasonal_balances(
         ...     winter_balance=winter_balance, summer_balance=summer_balance,
         ...     winter_fraction=0.5, temporal_resolution=3
-        ... )['BALANCE']
+        ... )
         >>> np.isclose(balances.sum(), winter_balance + summer_balance)
         True
     """
@@ -380,8 +379,7 @@ def downscale_seasonal_balances(
         integrate_sine(intervals, **sine_w, mask=[0, winter_fraction]) +
         integrate_sine(intervals, **sine_s, mask=[winter_fraction, 1])
     )
-    t = np.arange(0.5, temporal_resolution, 1)
-    return pd.DataFrame({'TIME_STEP': t, 'BALANCE': balances})
+    return balances
 
 
 def downscale_balances_daily(
@@ -453,6 +451,6 @@ def downscale_balances_daily(
                 winter_fraction=winter_fraction,
                 temporal_resolution=n_dates
             )
-        year = pd.DataFrame({'BALANCE': balances['BALANCE'], 'DATE': dates})
+        year = pd.DataFrame({'BALANCE': balances, 'DATE': dates})
         years.append(year)
     return pd.concat(years).set_index('DATE')
