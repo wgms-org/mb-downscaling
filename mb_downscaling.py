@@ -164,9 +164,9 @@ def generate_seasonal_sine(
 
 
 def calculate_seasonal_balances(
-    annual_balance: float,
-    balance_amplitude: float
-) -> Tuple[float, float]:
+    annual_balance: Numeric,
+    balance_amplitude: Numeric
+) -> Tuple[Numeric, Numeric]:
     """
     Calculate seasonal balances from annual balance and amplitude.
 
