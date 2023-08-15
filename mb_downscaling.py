@@ -1,11 +1,14 @@
 """
 Interpolate glacier mass balance from seasonal observations.
 """
+from __future__ import annotations
 import datetime
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, Tuple, Union
 
 import pandas as pd
 import numpy as np
+
+Numeric = Union[float, np.ndarray, pd.Series]
 
 
 def evaluate_sine(
@@ -191,7 +194,7 @@ def sine_interpolation_from_mean_balances(
 
     Arguments:
         balance_amplitude: Mass-balance amplitude
-            (see `calc_mass_balance_amplitude`).
+            (see `calculate_balance_amplitude`).
         annual_balance: Annual mass balance.
         temporal_resolution: Temporal resolution of output,
             e.g. 12 (~monthly) or 365 (~daily).
@@ -370,7 +373,7 @@ def interpolate_daily_balances(
             and ANNUAL_BALANCE (float).
         alpha: Mass-balance amplitude. If not provided,
             it is computed from the seasonal balances in `bwsa_df`
-            (see `calc_mass_balance_amplitude`).
+            (see `calculate_balance_amplitude`).
         winter_fraction: Annual fraction of winter season.
         winter_start: Date of the start of winter as a year offset
             (False: previous, True: current), month, and day.
@@ -386,7 +389,10 @@ def interpolate_daily_balances(
     """
     is_start_year, month, day = winter_start
     if alpha is None:
-        alpha = calc_mass_balance_amplitude(bwsa_df)
+        alphas = calculate_balance_amplitude(
+            bwsa_df['WINTER_BALANCE'], bwsa_df['SUMMER_BALANCE']
+        )
+        alpha = alphas.mean()
     if month == 2 and day == 29:
         raise ValueError('Winter cannot start on a leap day (February 29)')
     years = []
@@ -422,9 +428,12 @@ def interpolate_daily_balances(
     return pd.concat(years).set_index('DATE')
 
 
-def calc_mass_balance_amplitude(bwsa_df: pd.DataFrame) -> float:
+def calculate_balance_amplitude(
+    winter_balance: Numeric,
+    summer_balance: Numeric
+) -> Numeric:
     """
-    Calculate the mean mass-balance amplitude from winter and summer balances.
+    Calculate the mass-balance amplitude from seasonal balances.
 
     Mass-balance amplitude is defined as half the absolute value of the
     difference between the summer and winter balance.
@@ -434,11 +443,16 @@ def calc_mass_balance_amplitude(bwsa_df: pd.DataFrame) -> float:
     Braithwaite & Hughes 2020 (https://doi.org/10.3389/feart.2020.00302).
 
     Arguments:
-        bwsa_df: Dataframe with columns WINTER_BALANCE (float) and
-            SUMMER_BALANCE (float).
+        winter_balance: Winter mass balance.
+        summer_balance: Summer mass balance.
 
     Returns:
-        Mean of mass-balance amplitudes.
+        Mass-balance amplitude.
+
+    Examples:
+        >>> calculate_balance_amplitude(-4, 2)
+        3.0
+        >>> calculate_balance_amplitude(4, -2)
+        3.0
     """
-    alphas = ((bwsa_df['WINTER_BALANCE'] - bwsa_df['SUMMER_BALANCE']) / 2).abs()
-    return alphas.mean()
+    return abs((winter_balance - summer_balance) / 2)
