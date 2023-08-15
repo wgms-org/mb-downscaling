@@ -1,4 +1,4 @@
-name: mb-interpolation
+name: mb-downscaling
 dependencies:
   - python=3
   - numpy
