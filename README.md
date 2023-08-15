@@ -9,7 +9,7 @@ Download the Python module [`mb_downscaling.py`](/mb_downscaling.py) to your loc
 ```py
 import mb_downscaling
 
-mb_downscaling.sine_interpolation_from_mean_balances(annual_balance=-1, balance_amplitude=3)
+mb_downscaling.sine_interpolation_from_seasonal_balances(winter_balance=2.5, summer_balance=-3.5)
 ```
 
 See the Jupyter Notebook ([`demo.ipynb`](/demo.ipynb)) for a more complete example.
