@@ -381,6 +381,70 @@ def downscale_seasonal_balances(
     return balances
 
 
+def fill_balances(
+    balances: Iterable[Tuple[float, float, float]],
+    balance_amplitude: float = None
+) -> np.ndarray:
+    """
+    Fill missing winter, summer, or annual mass balances using each other.
+
+    Arguments:
+        balances: Series of winter, summer, and annual balance [(w, s, a), ...].
+        balance_amplitude: Mean mass-balance amplitude. If not provided,
+            it is computed from the seasonal balances in `balances`
+            (see `calculate_balance_amplitude`).
+
+    Returns:
+        Array of filled winter, summer, and annual balances [(w, s, a), ...].
+
+    Examples:
+        >>> balances = [
+        ...     (None, -4, -2),
+        ...     (2, None, -2),
+        ...     (2, -4, None),
+        ...     (3, -3, 0),
+        ...     (None, None, 0),
+        ... ]
+        >>> fill_balances(balances)
+        array([[ 2., -4., -2.],
+               [ 2., -4., -2.],
+               [ 2., -4., -2.],
+               [ 3., -3.,  0.],
+               [ 3., -3.,  0.]])
+        >>> fill_balances(balances[4:5], balance_amplitude=2)
+        array([[ 2., -2.,  0.]])
+    """
+    # winter | summer | annual
+    balances = np.array(balances, dtype=float)
+    # Fill winter
+    mask = np.isnan(balances[:, 0])
+    balances[mask, 0] = balances[mask, 2] - balances[mask, 1]
+    # Fill summer
+    mask = np.isnan(balances[:, 1])
+    balances[mask, 1] = balances[mask, 2] - balances[mask, 0]
+    # Fill annual
+    mask = np.isnan(balances[:, 2])
+    balances[mask, 2] = balances[mask, 0] + balances[mask, 1]
+    # Fill winter and summer
+    mask = np.isnan(balances[:, 0]) & np.isnan(balances[:, 1])
+    if mask.any():
+        if balance_amplitude is None:
+            if mask.all():
+                raise ValueError(
+                    'No seasonal balances from which to estimate balance amplitude.'
+                    ' Please provide one.'
+                )
+            balance_amplitude = calculate_balance_amplitude(
+                winter_balance=balances[~mask, 0],
+                summer_balance=balances[~mask, 1]
+            ).mean()
+        balances[mask, 0], balances[mask, 1] = calculate_seasonal_balances(
+            annual_balance=balances[mask, 2],
+            balance_amplitude=balance_amplitude
+        )
+    return balances
+
+
 def generate_annual_datetime_sequence(
     start: datetime.datetime,
     width: datetime.timedelta = datetime.timedelta(days=1),
