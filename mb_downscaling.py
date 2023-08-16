@@ -164,7 +164,7 @@ def generate_seasonal_sine(
 
 def calculate_seasonal_balances(
     annual_balance: Numeric,
-    balance_amplitude: Numeric
+    balance_amplitude: float
 ) -> Tuple[Numeric, Numeric]:
     """
     Calculate seasonal balances from annual balance and amplitude.
@@ -393,7 +393,7 @@ def generate_annual_datetime_sequence(
         start: Start of the year.
         width: Width of each interval.
         count: Number of intervals to divide year into.
-            If provided, step is ignored.
+            If provided, width is ignored.
             Since year length ranges from 365 to 366 days, width will
             vary from year to year.
 
