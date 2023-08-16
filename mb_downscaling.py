@@ -127,30 +127,29 @@ def generate_seasonal_sine(
 
         Summer and winter seasonal balances.
 
-        >>> Bw, Bs = 4, -2
-        >>> sine = generate_seasonal_sine(Bw, interval=intervals[0])
-        >>> integrate_sine(intervals[0], **sine)[0] == Bw
+        >>> bw, bs = 4, -2
+        >>> sine = generate_seasonal_sine(bw, interval=intervals[0])
+        >>> integrate_sine(intervals[0], **sine)[0] == bw
         True
-        >>> sine = generate_seasonal_sine(Bs, interval=intervals[1])
-        >>> integrate_sine(intervals[1], **sine)[0] == Bs
+        >>> sine = generate_seasonal_sine(bs, interval=intervals[1])
+        >>> integrate_sine(intervals[1], **sine)[0] == bs
         True
-        >>>
 
         Annual balance and balance amplitude with uniform annual balance.
 
-        >>> Ba, alpha = 2, 3
-        >>> Bwi, Bsi = Ba/2 + alpha, Ba/2 - alpha
+        >>> ba, alpha = 2, 3
+        >>> bwi, bsi = calculate_seasonal_balances(ba, alpha)
         >>> sine = generate_seasonal_sine(
-        ...     Bwi, interval=intervals[0], annual_balance=Ba
+        ...     bwi, interval=intervals[0], annual_balance=ba
         ... )
-        >>> Bw = integrate_sine(intervals[0], **sine)[0]
+        >>> bw = integrate_sine(intervals[0], **sine)[0]
         >>> sine = generate_seasonal_sine(
-        ...     Bsi, interval=intervals[1], annual_balance=Ba
+        ...     bsi, interval=intervals[1], annual_balance=ba
         ... )
-        >>> Bs = integrate_sine(intervals[1], **sine)[0]
-        >>> Ba == Bw + Bs
+        >>> bs = integrate_sine(intervals[1], **sine)[0]
+        >>> ba == bw + bs
         True
-        >>> alpha == abs(Bw - Bs) / 2
+        >>> alpha == abs(bw - bs) / 2
         True
     """
     width = abs(interval[0] - interval[1])
