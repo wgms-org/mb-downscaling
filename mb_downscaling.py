@@ -17,7 +17,7 @@ def evaluate_sine(
     b: float = 1,
     c: float = 0,
     d: float = 0,
-    mask: Iterable[float] = None
+    mask: Tuple[float, float] = None
 ) -> np.ndarray:
     """
     Evaluate sine function.
@@ -44,7 +44,7 @@ def evaluate_sine(
         array([0., 2., 0.])
         >>> evaluate_sine([0, np.pi/2, np.pi], d=1)
         array([1., 2., 1.])
-        >>> evaluate_sine([0, np.pi/2, np.pi], d=1, mask=[0, np.pi/2])
+        >>> evaluate_sine([0, np.pi/2, np.pi], d=1, mask=(0, np.pi/2))
         array([0., 0., 1.])
     """
     x = np.atleast_1d(x)
@@ -55,12 +55,12 @@ def evaluate_sine(
 
 
 def integrate_sine(
-    intervals: Iterable[Iterable[float]],
+    intervals: Iterable[Tuple[float, float]],
     a: float = 1,
     b: float = 1,
     c: float = 0,
     d: float = 0,
-    mask: Iterable[float] = None
+    mask: Tuple[float, float] = None
 ) -> np.ndarray:
     """
     Integrate sine function.
@@ -91,7 +91,7 @@ def integrate_sine(
         array([ 4., -4.])
         >>> integrate_sine([(0, np.pi), (np.pi, 2 * np.pi)], d=2/np.pi)
         array([4., 0.])
-        >>> integrate_sine([(0, np.pi/2), (np.pi/2, np.pi)], mask=[0, np.pi/2])
+        >>> integrate_sine([(0, np.pi/2), (np.pi/2, np.pi)], mask=(0, np.pi/2))
         array([1., 0.])
     """
     intervals = np.atleast_2d(intervals)
@@ -108,7 +108,7 @@ def integrate_sine(
 
 def generate_seasonal_sine(
     balance: float,
-    interval: Iterable[float] = [0, 0.5],
+    interval: Tuple[float, float] = (0, 0.5),
     annual_balance: float = 0
 ) -> Dict[str, float]:
     """
@@ -116,7 +116,7 @@ def generate_seasonal_sine(
 
     Arguments:
         balance: Seasonal balance.
-        interval: Seasonal interval, assuming the hydrological year is [0, 1].
+        interval: Seasonal interval, assuming the hydrological year is (0, 1).
         annual_balance: Annual balance applied uniformally over the year.
 
     Returns:
