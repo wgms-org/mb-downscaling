@@ -382,11 +382,74 @@ def downscale_seasonal_balances(
     return balances
 
 
-def downscale_balances_daily(
+def generate_annual_datetime_sequence(
+    start: datetime.datetime,
+    width: datetime.timedelta = datetime.timedelta(days=1),
+    count: int = None
+) -> np.ndarray:
+    """
+    Generate a regularly-spaced sequence of datetimes spanning one year.
+
+    Arguments:
+        start: Start of the year.
+        width: Width of each interval.
+        count: Number of intervals to divide year into.
+            If provided, step is ignored.
+            Since year length ranges from 365 to 366 days, width will
+            vary from year to year.
+
+    Raises:
+        ValueError: If start is February 29.
+        ValueError: If width does not divide year evenly.
+
+    Returns:
+        Sequence of datetimes for the egdes of the intervals
+        (length `n + 1` for `n` intervals).
+
+    Examples:
+        >>> start = datetime.datetime(2023, 8, 15, 17, 30)
+
+        A single interval for the whole year.
+
+        >>> generate_annual_datetime_sequence(start, count=1)
+        array([datetime.datetime(2023, 8, 15, 17, 30),
+               datetime.datetime(2024, 8, 15, 17, 30)], dtype=object)
+
+        Daily intervals two ways (2024 is a leap year).
+
+        >>> a = generate_annual_datetime_sequence(start, count=366)
+        >>> b = generate_annual_datetime_sequence(
+        ...     start, width=datetime.timedelta(days=1)
+        ... )
+        >>> all(a == b)
+        True
+        >>> widths = a[1:] - a[:-1]
+        >>> all(widths == datetime.timedelta(days=1))
+        True
+    """
+    if start.month == 2 and start.day == 29:
+        raise ValueError('Cannot start on a leap day (February 29)')
+    end = start.replace(year=start.year + 1)
+    delta = end - start
+    if count is not None:
+        width = delta / count
+    else:
+        count = delta / width
+        if count != int(count):
+            raise ValueError(
+                f'Width ({width}) does not divide year evenly ({delta})'
+            )
+        count = int(count)
+    return start + np.arange(count + 1) * width
+
+
+def downscale_balances(
     bwsa_df: pd.DataFrame,
     balance_amplitude: float = None,
     winter_fraction: float = 0.5,
-    winter_start: Tuple[bool, int, int] = (False, 10, 1),
+    winter_start: Iterable[int] = (10, 1),
+    interval_width: datetime.timedelta = datetime.timedelta(days=1),
+    interval_count: int = None,
     uniform_annual_balance: bool = False
 ) -> pd.DataFrame:
     """
@@ -403,35 +466,36 @@ def downscale_balances_daily(
             it is computed from the seasonal balances in `bwsa_df`
             (see `calculate_balance_amplitude`).
         winter_fraction: Annual fraction of winter season.
-        winter_start: Date of the start of winter as a year offset
-            (False: previous, True: current), month, and day.
+        winter_start: Start date of winter as a month, day, and optional
+            hour, minute, second, ... (see arguments to `datetime.datetime`).
+            The start year of winter is given by column Year in `bwsa_df` - 1.
+        interval_width: Width of each interval.
+        interval_count: Number of intervals to divide each year into.
+            If provided, interval_width is ignored.
         uniform_annual_balance: Whether annual balance should be applied
             uniformally over the year (True) rather than assume that all mass
             gain/loss occurs in winter/summer (False).
 
     Returns:
-        Dataframe with index DATE (datetime) and column BALANCE (float).
+        Dataframe with index DATE (middle datetime) and column BALANCE (float).
 
     Raises:
         ValueError: If winter_start is February 29.
+        ValueError: If interval_width does not divide year evenly.
     """
-    is_start_year, month, day = winter_start
     if balance_amplitude is None:
         balance_amplitudes = calculate_balance_amplitude(
             bwsa_df['WINTER_BALANCE'], bwsa_df['SUMMER_BALANCE']
         )
         balance_amplitude = balance_amplitudes.mean()
-    if month == 2 and day == 29:
-        raise ValueError('Winter cannot start on a leap day (February 29)')
     years = []
     for row in bwsa_df.to_dict(orient='records'):
         # Create series of every date in the hydrological year
-        start_year = int(row['Year']) - (0 if is_start_year else 1)
-        start_date = datetime.datetime(start_year, month, day)
-        end_date = (
-            start_date.replace(year=start_year + 1) - datetime.timedelta(days=1)
+        edges = generate_annual_datetime_sequence(
+            start=datetime.datetime(int(row['Year']) - 1, *winter_start),
+            width=datetime.timedelta(days=1)
         )
-        dates = pd.date_range(start_date, end_date, freq='D')
+        dates = edges[:-1] + (edges[1:] - edges[:-1]) / 2
         n_dates = dates.size
         # Downscale to daily resolution
         if np.isnan(row['WINTER_BALANCE']) or np.isnan(row['SUMMER_BALANCE']):
