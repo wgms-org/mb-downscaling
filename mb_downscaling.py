@@ -5,19 +5,18 @@ from __future__ import annotations
 import datetime
 from typing import Dict, Iterable, Tuple, Union
 
-import pandas as pd
 import numpy as np
 
-Numeric = Union[float, np.ndarray, pd.Series]
+Number = Union[float, int]
 
 
 def evaluate_sine(
-    x: Iterable[float],
-    a: float = 1,
-    b: float = 1,
-    c: float = 0,
-    d: float = 0,
-    mask: Tuple[float, float] = None
+    x: Iterable[Number],
+    a: Number = 1,
+    b: Number = 1,
+    c: Number = 0,
+    d: Number = 0,
+    mask: Tuple[Number, Number] | Iterable[Number] = None
 ) -> np.ndarray:
     """
     Evaluate sine function.
@@ -32,7 +31,7 @@ def evaluate_sine(
         b: Period scaling (period = 2π/b).
         c: Phase shift (positive: right).
         d: Vertical shift (positive: up).
-        mask: Interval outside of which the function is zero.
+        mask: Interval outside of which the function is zero (min, max).
 
     Returns:
         Function values.
@@ -55,12 +54,12 @@ def evaluate_sine(
 
 
 def integrate_sine(
-    intervals: Iterable[Tuple[float, float]],
-    a: float = 1,
-    b: float = 1,
-    c: float = 0,
-    d: float = 0,
-    mask: Tuple[float, float] = None
+    intervals: Iterable[Tuple[Number, Number]] | np.ndarray | pd.DataFrame,
+    a: Number = 1,
+    b: Number = 1,
+    c: Number = 0,
+    d: Number = 0,
+    mask: Tuple[Number, Number] | Iterable[Number] = None
 ) -> np.ndarray:
     """
     Integrate sine function.
@@ -79,7 +78,7 @@ def integrate_sine(
         b: Period scaling (period = 2π/b).
         c: Phase shift (positive: right).
         d: Vertical shift (positive: up).
-        mask: Interval outside of which the integral is zero.
+        mask: Interval outside of which the integral is zero (min, max).
 
     Returns:
         Integral for each interval.
@@ -107,10 +106,10 @@ def integrate_sine(
 
 
 def generate_seasonal_sine(
-    balance: float,
-    interval: Tuple[float, float] = (0, 0.5),
-    annual_balance: float = 0
-) -> Dict[str, float]:
+    balance: Number,
+    interval: Tuple[Number, Number] | Iterable[Number] = (0, 0.5),
+    annual_balance: Number = 0
+) -> Dict[str, Number]:
     """
     Generate a sine function that estimates a mass balance season.
 
@@ -152,7 +151,7 @@ def generate_seasonal_sine(
         >>> alpha == abs(bw - bs) / 2
         True
     """
-    width = abs(interval[0] - interval[1])
+    width = abs(min(*interval) - max(*interval))
     b = (2 * np.pi) / (2 * width)
     return {
         'a': (balance - annual_balance * width) * b / 2,
@@ -163,9 +162,9 @@ def generate_seasonal_sine(
 
 
 def calculate_seasonal_balances(
-    annual_balance: Numeric,
-    balance_amplitude: float
-) -> Tuple[Numeric, Numeric]:
+    annual_balance: Number | np.ndarray | pd.Series,
+    balance_amplitude: Number
+) -> Tuple[Number | np.ndarray | pd.Series, Number | np.ndarray | pd.Series]:
     """
     Calculate seasonal balances from annual balance and amplitude.
 
@@ -179,9 +178,9 @@ def calculate_seasonal_balances(
 
 
 def calculate_balance_amplitude(
-    winter_balance: Numeric,
-    summer_balance: Numeric
-) -> Numeric:
+    winter_balance: Number | np.ndarray | pd.Series,
+    summer_balance: Number | np.ndarray | pd.Series
+) -> Number | np.ndarray | pd.Series:
     """
     Calculate the mass-balance amplitude from seasonal balances.
 
@@ -209,9 +208,9 @@ def calculate_balance_amplitude(
 
 
 def downscale_annual_balance(
-    annual_balance: float,
-    balance_amplitude: float,
-    winter_fraction: float = 0.5,
+    annual_balance: Number,
+    balance_amplitude: Number,
+    winter_fraction: Number = 0.5,
     temporal_resolution: int = 365,
     uniform_annual_balance: bool = False
 ) -> np.ndarray:
@@ -312,9 +311,9 @@ def downscale_annual_balance(
 
 
 def downscale_seasonal_balances(
-    winter_balance: float,
-    summer_balance: float,
-    winter_fraction: float = 0.5,
+    winter_balance: Number,
+    summer_balance: Number,
+    winter_fraction: Number = 0.5,
     temporal_resolution: int = 365
 ) -> np.ndarray:
     """
@@ -382,8 +381,8 @@ def downscale_seasonal_balances(
 
 
 def fill_balances(
-    balances: Iterable[Tuple[float, float, float]],
-    balance_amplitude: float = None
+    balances: Iterable[Tuple[Number, Number, Number]] | np.ndarray | pd.DataFrame,
+    balance_amplitude: Number = None
 ) -> np.ndarray:
     """
     Fill missing winter, summer, or annual mass balances using each other.
@@ -506,15 +505,16 @@ def generate_annual_datetime_sequence(
     return start + np.arange(count + 1) * width
 
 
-def downscale_balances(
-    bwsa_df: pd.DataFrame,
-    balance_amplitude: float = None,
-    winter_fraction: float = 0.5,
+def downscale_balance_series(
+    years: Iterable[int],
+    balances: Iterable[Tuple[Number, Number, Number]] | np.ndarray | pd.DataFrame,
+    balance_amplitude: Number = None,
+    winter_fraction: Number = 0.5,
     winter_start: Iterable[int] = (10, 1),
     interval_width: datetime.timedelta = datetime.timedelta(days=1),
     interval_count: int = None,
     uniform_annual_balance: bool = False
-) -> pd.DataFrame:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Downscale seasonal or annual mass balances to daily resolution.
 
@@ -522,9 +522,8 @@ def downscale_balances(
     for the two strategies used.
 
     Arguments:
-        bwsa_df: DataFrame with columns
-            Year (int), WINTER_BALANCE (float), SUMMER_BALANCE (float),
-            and ANNUAL_BALANCE (float).
+        years: End year of each hydrological year.
+        balances: Series of winter, summer, and annual balance [(w, s, a), ...].
         balance_amplitude: Mean mass-balance amplitude. If not provided,
             it is computed from the seasonal balances in `bwsa_df`
             (see `calculate_balance_amplitude`).
@@ -540,31 +539,34 @@ def downscale_balances(
             gain/loss occurs in winter/summer (False).
 
     Returns:
-        Dataframe with index DATE (middle datetime) and column BALANCE (float).
+        Tuple of datetimes (start of each interval) and balances.
 
     Raises:
         ValueError: If winter_start is February 29.
         ValueError: If interval_width does not divide year evenly.
     """
+    balances = np.array(balances, dtype=float)
     if balance_amplitude is None:
         balance_amplitudes = calculate_balance_amplitude(
-            bwsa_df['WINTER_BALANCE'], bwsa_df['SUMMER_BALANCE']
+            winter_balance=balances[:, 0],
+            summer_balance=balances[:, 1]
         )
         balance_amplitude = balance_amplitudes.mean()
-    years = []
-    for row in bwsa_df.to_dict(orient='records'):
+    results = []
+    for year, balance in zip(years, balances):
         # Create series of every date in the hydrological year
         edges = generate_annual_datetime_sequence(
-            start=datetime.datetime(int(row['Year']) - 1, *winter_start),
-            width=datetime.timedelta(days=1)
+            start=datetime.datetime(year - 1, *winter_start),
+            width=interval_width,
+            count=interval_count
         )
-        dates = edges[:-1] + (edges[1:] - edges[:-1]) / 2
+        dates = edges[:-1]
         n_dates = dates.size
         # Downscale to daily resolution
-        if np.isnan(row['WINTER_BALANCE']) or np.isnan(row['SUMMER_BALANCE']):
+        if np.isnan(balance[0]) or np.isnan(balance[1]):
             # Use annual balance
-            balances = downscale_annual_balance(
-                annual_balance=row['ANNUAL_BALANCE'],
+            scaled_balances = downscale_annual_balance(
+                annual_balance=balance[2],
                 balance_amplitude=balance_amplitude,
                 winter_fraction=winter_fraction,
                 temporal_resolution=n_dates,
@@ -572,12 +574,14 @@ def downscale_balances(
             )
         else:
             # Use seasonal balances
-            balances = downscale_seasonal_balances(
-                winter_balance=row['WINTER_BALANCE'],
-                summer_balance=row['SUMMER_BALANCE'],
+            scaled_balances = downscale_seasonal_balances(
+                winter_balance=balance[0],
+                summer_balance=balance[1],
                 winter_fraction=winter_fraction,
                 temporal_resolution=n_dates
             )
-        year = pd.DataFrame({'BALANCE': balances, 'DATE': dates})
-        years.append(year)
-    return pd.concat(years).set_index('DATE')
+        results.append((dates, scaled_balances))
+    return (
+        np.concatenate([r[0] for r in results]),
+        np.concatenate([r[1] for r in results])
+    )
