@@ -404,7 +404,8 @@ def downscale_balance_series(
             If provided, interval_width is ignored.
 
     Returns:
-        Tuple of datetimes (start of each interval) and balances.
+        Intervals start and end datetimes [(start, end), ...]
+        and the corresponding balance for each interval.
 
     Raises:
         ValueError: If winter_start is February 29.
@@ -414,22 +415,21 @@ def downscale_balance_series(
     balances = fill_balances(balances, balance_amplitude=balance_amplitude)
     results = []
     for year, balance in zip(years, balances):
-        # Create series of every date in the hydrological year
+        # Create datetime sequence spanning the hydrological year
         edges = generate_annual_datetime_sequence(
             start=datetime.datetime(year - 1, *winter_start),
             width=interval_width,
             count=interval_count
         )
-        dates = edges[:-1]
-        n_dates = dates.size
-        # Downscale to daily resolution
+        start, end = edges[:-1], edges[1:]
+        # Downscale to matching temporal resolution
         scaled_balances = downscale_seasonal_balances(
             winter_balance=balance[0],
             summer_balance=balance[1],
             winter_fraction=winter_fraction,
-            temporal_resolution=n_dates
+            temporal_resolution=start.size
         )
-        results.append((dates, scaled_balances))
+        results.append((np.column_stack((start, end)), scaled_balances))
     return (
         np.concatenate([r[0] for r in results]),
         np.concatenate([r[1] for r in results])
