@@ -411,12 +411,7 @@ def downscale_balance_series(
         ValueError: If interval_width does not divide year evenly.
     """
     balances = np.array(balances, dtype=float)
-    if balance_amplitude is None:
-        balance_amplitudes = calculate_balance_amplitude(
-            winter_balance=balances[:, 0],
-            summer_balance=balances[:, 1]
-        )
-        balance_amplitude = balance_amplitudes.mean()
+    balances = fill_balances(balances, balance_amplitude=balance_amplitude)
     results = []
     for year, balance in zip(years, balances):
         # Create series of every date in the hydrological year
@@ -428,22 +423,12 @@ def downscale_balance_series(
         dates = edges[:-1]
         n_dates = dates.size
         # Downscale to daily resolution
-        if np.isnan(balance[0]) or np.isnan(balance[1]):
-            # Use annual balance
-            scaled_balances = downscale_annual_balance(
-                annual_balance=balance[2],
-                balance_amplitude=balance_amplitude,
-                winter_fraction=winter_fraction,
-                temporal_resolution=n_dates
-            )
-        else:
-            # Use seasonal balances
-            scaled_balances = downscale_seasonal_balances(
-                winter_balance=balance[0],
-                summer_balance=balance[1],
-                winter_fraction=winter_fraction,
-                temporal_resolution=n_dates
-            )
+        scaled_balances = downscale_seasonal_balances(
+            winter_balance=balance[0],
+            summer_balance=balance[1],
+            winter_fraction=winter_fraction,
+            temporal_resolution=n_dates
+        )
         results.append((dates, scaled_balances))
     return (
         np.concatenate([r[0] for r in results]),
