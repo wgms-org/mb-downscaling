@@ -45,7 +45,7 @@ def evaluate_sine(
     x = np.atleast_1d(x)
     f = a * np.sin(b * (x - c))
     if mask is not None:
-        f[(x >= min(*mask)) & (x <= max(*mask))] = 0
+        f[(x < min(*mask)) | (x > max(*mask))] = 0
     return f
 
 
