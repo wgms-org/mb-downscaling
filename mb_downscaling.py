@@ -15,7 +15,6 @@ def evaluate_sine(
     a: Number = 1,
     b: Number = 1,
     c: Number = 0,
-    d: Number = 0,
     mask: Tuple[Number, Number] | Iterable[Number] = None
 ) -> np.ndarray:
     """
@@ -23,14 +22,13 @@ def evaluate_sine(
 
     The function is assumed to be of the form:
 
-    f(x) = a sin(b(x - c)) + d
+    f(x) = a sin(b(x - c))
 
     Arguments:
         x: Values at which to evaluate the function.
         a: Amplitude.
         b: Period scaling (period = 2π/b).
         c: Phase shift (positive: right).
-        d: Vertical shift (positive: up).
         mask: Interval outside of which the function is zero (min, max).
 
     Returns:
@@ -41,13 +39,11 @@ def evaluate_sine(
         array([ 0.,  1.,  0., -1., -0.])
         >>> evaluate_sine([0, np.pi/2, np.pi], a=2).round(12)
         array([0., 2., 0.])
-        >>> evaluate_sine([0, np.pi/2, np.pi], d=1)
-        array([1., 2., 1.])
-        >>> evaluate_sine([0, np.pi/2, np.pi], d=1, mask=(0, np.pi/2))
-        array([0., 0., 1.])
+        >>> evaluate_sine([0, np.pi/2, np.pi], a=2, mask=(-1, 0))
+        array([0., 0., 0.])
     """
     x = np.atleast_1d(x)
-    f = a * np.sin(b * (x - c)) + d
+    f = a * np.sin(b * (x - c))
     if mask is not None:
         f[(x >= min(*mask)) & (x <= max(*mask))] = 0
     return f
@@ -58,7 +54,6 @@ def integrate_sine(
     a: Number = 1,
     b: Number = 1,
     c: Number = 0,
-    d: Number = 0,
     mask: Tuple[Number, Number] | Iterable[Number] = None
 ) -> np.ndarray:
     """
@@ -66,18 +61,17 @@ def integrate_sine(
 
     The function is assumed to be of the form:
 
-    f(x) = a sin(b(x - c)) + d
+    f(x) = a sin(b(x - c))
 
     The integral in the interval [i, j] is then:
 
-    a(cos(b(i - c)) - cos(b(j - c))) / b + d(j - i)
+    a(cos(b(i - c)) - cos(b(j - c))) / b
 
     Arguments:
         intervals: Intervals to integrate over [(i1, j1), ..., (in, jn)].
         a: Amplitude.
         b: Period scaling (period = 2π/b).
         c: Phase shift (positive: right).
-        d: Vertical shift (positive: up).
         mask: Interval outside of which the integral is zero (min, max).
 
     Returns:
@@ -88,8 +82,6 @@ def integrate_sine(
         array([ 2., -2.,  0.])
         >>> integrate_sine([(0, np.pi), (np.pi, 2 * np.pi)], a=2)
         array([ 4., -4.])
-        >>> integrate_sine([(0, np.pi), (np.pi, 2 * np.pi)], d=2/np.pi)
-        array([4., 0.])
         >>> integrate_sine([(0, np.pi/2), (np.pi/2, np.pi)], mask=(0, np.pi/2))
         array([1., 0.])
     """
@@ -102,13 +94,12 @@ def integrate_sine(
         intervals[intervals > xmax] = xmax
     i = intervals[:, 0]
     j = intervals[:, 1]
-    return a * (np.cos(b * (i - c)) - np.cos(b * (j - c))) / b + d * (j - i)
+    return a * (np.cos(b * (i - c)) - np.cos(b * (j - c))) / b
 
 
 def generate_seasonal_sine(
     balance: Number,
-    interval: Tuple[Number, Number] | Iterable[Number] = (0, 0.5),
-    annual_balance: Number = 0
+    interval: Tuple[Number, Number] | Iterable[Number] = (0, 0.5)
 ) -> Dict[str, Number]:
     """
     Generate a sine function that estimates a mass balance season.
@@ -116,7 +107,6 @@ def generate_seasonal_sine(
     Arguments:
         balance: Seasonal balance.
         interval: Seasonal interval, assuming the hydrological year is (0, 1).
-        annual_balance: Annual balance applied uniformally over the year.
 
     Returns:
         Sine function parameters (see `evaluate_sine`, `integrate_sine`).
@@ -133,31 +123,13 @@ def generate_seasonal_sine(
         >>> sine = generate_seasonal_sine(bs, interval=intervals[1])
         >>> integrate_sine(intervals[1], **sine)[0] == bs
         True
-
-        Annual balance and balance amplitude with uniform annual balance.
-
-        >>> ba, alpha = 2, 3
-        >>> bwi, bsi = calculate_seasonal_balances(ba, alpha)
-        >>> sine = generate_seasonal_sine(
-        ...     bwi, interval=intervals[0], annual_balance=ba
-        ... )
-        >>> bw = integrate_sine(intervals[0], **sine)[0]
-        >>> sine = generate_seasonal_sine(
-        ...     bsi, interval=intervals[1], annual_balance=ba
-        ... )
-        >>> bs = integrate_sine(intervals[1], **sine)[0]
-        >>> ba == bw + bs
-        True
-        >>> alpha == abs(bw - bs) / 2
-        True
     """
     width = abs(min(*interval) - max(*interval))
     b = (2 * np.pi) / (2 * width)
     return {
-        'a': (balance - annual_balance * width) * b / 2,
+        'a': balance * b / 2,
         'b': b,
-        'c': min(*interval),
-        'd': annual_balance
+        'c': min(*interval)
     }
 
 
@@ -205,109 +177,6 @@ def calculate_balance_amplitude(
         3.0
     """
     return abs((winter_balance - summer_balance) / 2)
-
-
-def downscale_annual_balance(
-    annual_balance: Number,
-    balance_amplitude: Number,
-    winter_fraction: Number = 0.5,
-    temporal_resolution: int = 365,
-    uniform_annual_balance: bool = False
-) -> np.ndarray:
-    """
-    Downscale annual mass balance over a full year.
-
-    Winter and summer balances are each represented by their own sine function
-    (see `generate_seasonal_sine`).
-
-    Arguments:
-        annual_balance: Annual mass balance.
-        balance_amplitude: Mass-balance amplitude
-            (see `calculate_balance_amplitude`).
-        winter_fraction: Annual fraction of winter season.
-        temporal_resolution: Temporal resolution of output,
-            e.g. 12 (~monthly) or 365 (~daily).
-        uniform_annual_balance: Whether annual balance should be applied
-            uniformally over the year (True) rather than assume that all mass
-            gain/loss occurs in winter/summer (False).
-
-    Returns:
-        Mass balance for each time interval.
-
-    Examples:
-        >>> balance_amplitude = 5
-        >>> annual_balance = -3
-
-        With winter and summer of equal length:
-
-        >>> balances = downscale_annual_balance(
-        ...     annual_balance, balance_amplitude, temporal_resolution=12
-        ... )
-        >>> np.isclose(annual_balance, balances.sum())
-        True
-        >>> np.isclose(
-        ...     balance_amplitude,
-        ...     abs(balances[:6].sum() - balances[6:].sum()) / 2
-        ... )
-        True
-
-        With winter and summer of different lengths:
-
-        >>> balances = downscale_annual_balance(
-        ...     annual_balance, balance_amplitude, temporal_resolution=12,
-        ...     winter_fraction=0.75
-        ... )
-        >>> np.isclose(annual_balance, balances.sum())
-        True
-        >>> np.isclose(
-        ...     balance_amplitude,
-        ...     abs(balances[:9].sum() - balances[9:].sum()) / 2
-        ... )
-        True
-
-        And with uniform annual balance:
-
-        >>> balances = downscale_annual_balance(
-        ...     annual_balance, balance_amplitude, temporal_resolution=12,
-        ...     winter_fraction=0.75, uniform_annual_balance=True
-        ... )
-        >>> np.isclose(annual_balance, balances.sum())
-        True
-        >>> np.isclose(
-        ...     balance_amplitude,
-        ...     abs(balances[:9].sum() - balances[9:].sum()) / 2
-        ... )
-        True
-    """
-    # Calculate seasonal balances from annual balance and balance amplitude
-    winter_balance, summer_balance = calculate_seasonal_balances(
-        annual_balance=annual_balance,
-        balance_amplitude=balance_amplitude
-    )
-    if uniform_annual_balance:
-        edges = np.linspace(0, 1, num=temporal_resolution + 1)
-        intervals = np.column_stack((edges[:-1], edges[1:]))
-        sine_w = generate_seasonal_sine(
-            winter_balance,
-            interval=[0, winter_fraction],
-            annual_balance=annual_balance
-        )
-        sine_s = generate_seasonal_sine(
-            summer_balance,
-            interval=[winter_fraction, 1],
-            annual_balance=annual_balance
-        )
-        balances = (
-            integrate_sine(intervals, **sine_w, mask=[0, winter_fraction]) +
-            integrate_sine(intervals, **sine_s, mask=[winter_fraction, 1])
-        )
-        return balances
-    return downscale_seasonal_balances(
-        winter_balance=winter_balance,
-        summer_balance=summer_balance,
-        winter_fraction=winter_fraction,
-        temporal_resolution=temporal_resolution
-    )
 
 
 def downscale_seasonal_balances(
@@ -512,8 +381,7 @@ def downscale_balance_series(
     winter_fraction: Number = 0.5,
     winter_start: Iterable[int] = (10, 1),
     interval_width: datetime.timedelta = datetime.timedelta(days=1),
-    interval_count: int = None,
-    uniform_annual_balance: bool = False
+    interval_count: int = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Downscale seasonal or annual mass balances to daily resolution.
@@ -525,8 +393,8 @@ def downscale_balance_series(
         years: End year of each hydrological year.
         balances: Series of winter, summer, and annual balance [(w, s, a), ...].
         balance_amplitude: Mean mass-balance amplitude. If not provided,
-            it is computed from the seasonal balances in `bwsa_df`
-            (see `calculate_balance_amplitude`).
+            it is the mean of amplitudes calculated from the seasonal balances
+            in `balances` (see `calculate_balance_amplitude`).
         winter_fraction: Annual fraction of winter season.
         winter_start: Start date of winter as a month, day, and optional
             hour, minute, second, ... (see arguments to `datetime.datetime`).
@@ -534,9 +402,6 @@ def downscale_balance_series(
         interval_width: Width of each interval.
         interval_count: Number of intervals to divide each year into.
             If provided, interval_width is ignored.
-        uniform_annual_balance: Whether annual balance should be applied
-            uniformally over the year (True) rather than assume that all mass
-            gain/loss occurs in winter/summer (False).
 
     Returns:
         Tuple of datetimes (start of each interval) and balances.
@@ -569,8 +434,7 @@ def downscale_balance_series(
                 annual_balance=balance[2],
                 balance_amplitude=balance_amplitude,
                 winter_fraction=winter_fraction,
-                temporal_resolution=n_dates,
-                uniform_annual_balance=uniform_annual_balance
+                temporal_resolution=n_dates
             )
         else:
             # Use seasonal balances
