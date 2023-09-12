@@ -325,8 +325,8 @@ def generate_annual_datetime_sequence(
         start: Start of the year.
         width: Width of each interval.
         count: Number of intervals to divide year into.
-            If provided, width is ignored.
-            Since year length ranges from 365 to 366 days, width will
+            If provided, `width` is ignored.
+            Since year length is either 365 or 366 days, `width` will
             vary from year to year.
 
     Raises:
@@ -398,10 +398,10 @@ def downscale_balance_series(
         winter_fraction: Annual fraction of winter season.
         winter_start: Start date of winter as a month, day, and optional
             hour, minute, second, ... (see arguments to `datetime.datetime`).
-            The start year of winter is given by column Year in `bwsa_df` - 1.
+            The start year of winter is given by `years` - 1.
         interval_width: Width of each interval.
         interval_count: Number of intervals to divide each year into.
-            If provided, interval_width is ignored.
+            If provided, `interval_width` is ignored.
 
     Returns:
         Intervals start and end datetimes [(start, end), ...]
