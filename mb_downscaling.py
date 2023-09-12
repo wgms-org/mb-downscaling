@@ -15,7 +15,7 @@ def evaluate_sine(
     a: Number = 1,
     b: Number = 1,
     c: Number = 0,
-    mask: Tuple[Number, Number] | Iterable[Number] = None
+    mask: Tuple[Number, Number] | Iterable[Number] | None = None
 ) -> np.ndarray:
     """
     Evaluate sine function.
@@ -42,10 +42,10 @@ def evaluate_sine(
         >>> evaluate_sine([0, np.pi/2, np.pi], a=2, mask=(-1, 0))
         array([0., 0., 0.])
     """
-    x = np.atleast_1d(x)
-    f = a * np.sin(b * (x - c))
+    xa = np.atleast_1d(x)
+    f = a * np.sin(b * (xa - c))
     if mask is not None:
-        f[(x < min(*mask)) | (x > max(*mask))] = 0
+        f[(xa < min(*mask)) | (xa > max(*mask))] = 0
     return f
 
 
@@ -54,7 +54,7 @@ def integrate_sine(
     a: Number = 1,
     b: Number = 1,
     c: Number = 0,
-    mask: Tuple[Number, Number] | Iterable[Number] = None
+    mask: Tuple[Number, Number] | Iterable[Number] | None = None
 ) -> np.ndarray:
     """
     Integrate sine function.
@@ -251,7 +251,7 @@ def downscale_seasonal_balances(
 
 def fill_balances(
     balances: Iterable[Tuple[Number, Number, Number]] | np.ndarray | pd.DataFrame,
-    balance_amplitude: Number = None
+    balance_amplitude: Number | None = None
 ) -> np.ndarray:
     """
     Fill missing winter, summer, or annual mass balances using each other.
@@ -377,11 +377,11 @@ def generate_annual_datetime_sequence(
 def downscale_balance_series(
     years: Iterable[int],
     balances: Iterable[Tuple[Number, Number, Number]] | np.ndarray | pd.DataFrame,
-    balance_amplitude: Number = None,
+    balance_amplitude: Number | None = None,
     winter_fraction: Number = 0.5,
     winter_start: Iterable[int] = (10, 1),
     interval_width: datetime.timedelta = datetime.timedelta(days=1),
-    interval_count: int = None
+    interval_count: int | None = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Downscale seasonal or annual mass balances to daily resolution.
