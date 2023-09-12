@@ -1,21 +1,25 @@
 """
 Downscale annual or seasonal glacier mass balance observations.
 """
-from __future__ import annotations
 import datetime
 from typing import Dict, Iterable, Tuple, Union
 
 import numpy as np
 
 Number = Union[float, int]
+Numbers = Union[Number, Iterable[Number]]
+Row2D = Tuple[Number, Number]
+Rows2D = Union[Row2D, Iterable[Row2D]]
+Row3D = Tuple[Number, Number, Number]
+Rows3D = Union[Row3D, Iterable[Row3D]]
 
 
 def evaluate_sine(
-    x: Iterable[Number],
+    x: Numbers,
     a: Number = 1,
     b: Number = 1,
     c: Number = 0,
-    mask: Tuple[Number, Number] | Iterable[Number] | None = None
+    mask: Row2D = None
 ) -> np.ndarray:
     """
     Evaluate sine function.
@@ -50,11 +54,11 @@ def evaluate_sine(
 
 
 def integrate_sine(
-    intervals: Iterable[Tuple[Number, Number]] | np.ndarray | pd.DataFrame,
+    intervals: Rows2D,
     a: Number = 1,
     b: Number = 1,
     c: Number = 0,
-    mask: Tuple[Number, Number] | Iterable[Number] | None = None
+    mask: Row2D = None
 ) -> np.ndarray:
     """
     Integrate sine function.
@@ -99,7 +103,7 @@ def integrate_sine(
 
 def generate_seasonal_sine(
     balance: Number,
-    interval: Tuple[Number, Number] | Iterable[Number] = (0, 0.5)
+    interval: Row2D = (0, 0.5)
 ) -> Dict[str, Number]:
     """
     Generate a sine function that estimates a mass balance season.
@@ -134,14 +138,19 @@ def generate_seasonal_sine(
 
 
 def calculate_seasonal_balances(
-    annual_balance: Number | np.ndarray | pd.Series,
+    annual_balance: Numbers,
     balance_amplitude: Number
-) -> Tuple[Number | np.ndarray | pd.Series, Number | np.ndarray | pd.Series]:
+) -> Tuple[Numbers, Numbers]:
     """
     Calculate seasonal balances from annual balance and amplitude.
 
+    Arguments:
+        annual_balance: Annual mass balance(s).
+        balance_amplitude: Mass-balance amplitude.
+
     Returns:
-        Winter and summer balances.
+        Winter and summer balances as float, `numpy.ndarray`, or `pandas.Series`
+        depending on the type of `annual_balance`.
     """
     return (
         annual_balance / 2 + balance_amplitude,
@@ -150,9 +159,9 @@ def calculate_seasonal_balances(
 
 
 def calculate_balance_amplitude(
-    winter_balance: Number | np.ndarray | pd.Series,
-    summer_balance: Number | np.ndarray | pd.Series
-) -> Number | np.ndarray | pd.Series:
+    winter_balance: Numbers,
+    summer_balance: Numbers
+) -> Numbers:
     """
     Calculate the mass-balance amplitude from seasonal balances.
 
@@ -168,7 +177,8 @@ def calculate_balance_amplitude(
         summer_balance: Summer mass balance.
 
     Returns:
-        Mass-balance amplitude.
+        Mass-balance amplitude as float, `numpy.ndarray`, or `pandas.Series`
+        depending on the type of `winter_balance` and `summer_balance`.
 
     Examples:
         >>> calculate_balance_amplitude(-4, 2)
@@ -250,8 +260,8 @@ def downscale_seasonal_balances(
 
 
 def fill_balances(
-    balances: Iterable[Tuple[Number, Number, Number]] | np.ndarray | pd.DataFrame,
-    balance_amplitude: Number | None = None
+    balances: Rows3D,
+    balance_amplitude: Number = None
 ) -> np.ndarray:
     """
     Fill missing winter, summer, or annual mass balances using each other.
@@ -283,7 +293,7 @@ def fill_balances(
         array([[ 2., -2.,  0.]])
     """
     # winter | summer | annual
-    balances = np.array(balances, dtype=float)
+    balances = np.atleast_2d(np.asarray(balances, dtype=float))
     # Fill winter
     mask = np.isnan(balances[:, 0])
     balances[mask, 0] = balances[mask, 2] - balances[mask, 1]
@@ -368,20 +378,22 @@ def generate_annual_datetime_sequence(
         count = delta / width
         if count != int(count):
             raise ValueError(
-                f'Width ({width}) does not divide year evenly ({delta})'
+                'Width ({width}) does not divide year evenly ({delta})'.format(
+                    width=width, delta=delta
+                )
             )
         count = int(count)
     return start + np.arange(count + 1) * width
 
 
 def downscale_balance_series(
-    years: Iterable[int],
-    balances: Iterable[Tuple[Number, Number, Number]] | np.ndarray | pd.DataFrame,
-    balance_amplitude: Number | None = None,
+    years: Numbers,
+    balances: Rows3D,
+    balance_amplitude: Number = None,
     winter_fraction: Number = 0.5,
     winter_start: Iterable[int] = (10, 1),
     interval_width: datetime.timedelta = datetime.timedelta(days=1),
-    interval_count: int | None = None
+    interval_count: int = None
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Downscale seasonal or annual mass balances to daily resolution.
@@ -411,7 +423,7 @@ def downscale_balance_series(
         ValueError: If winter_start is February 29.
         ValueError: If interval_width does not divide year evenly.
     """
-    balances = np.array(balances, dtype=float)
+    years = np.atleast_1d(years)
     balances = fill_balances(balances, balance_amplitude=balance_amplitude)
     results = []
     for year, balance in zip(years, balances):
